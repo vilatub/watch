@@ -176,6 +176,11 @@ Data is transmitted as a dictionary every 3 seconds:
 - [x] Voice feedback (audio notifications for pace/HR)
 - [x] Lap/interval tracking
 
+### Phase 5
+- [x] Settings persistence (DataStore)
+- [ ] Interval training (programmable work/rest periods)
+- [ ] Watch app improvements
+
 ## Strava Integration
 
 To enable Strava upload functionality:

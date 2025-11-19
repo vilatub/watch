@@ -41,6 +41,7 @@ import com.garminstreaming.app.alerts.ZoneAlertManager
 import com.garminstreaming.app.autopause.AutoPauseManager
 import com.garminstreaming.app.data.SessionManager
 import com.garminstreaming.app.laps.LapManager
+import com.garminstreaming.app.settings.SettingsRepository
 import com.garminstreaming.app.ui.SessionDetailScreen
 import com.garminstreaming.app.ui.SessionHistoryScreen
 import com.garminstreaming.app.ui.StatisticsScreen
@@ -192,6 +193,7 @@ fun ActivityStreamingScreen(
 
     val scope = rememberCoroutineScope()
     val repository = remember { SessionManager.getInstance() }
+    val settingsRepository = remember { SettingsRepository.getInstance(context) }
     val alertManager = remember { ZoneAlertManager.getInstance(context) }
     val autoPauseManager = remember { AutoPauseManager.getInstance() }
     val voiceManager = remember { VoiceFeedbackManager.getInstance(context) }
@@ -209,6 +211,34 @@ fun ActivityStreamingScreen(
     val autoPauseState by autoPauseManager.state.collectAsState()
     val voiceSettings by voiceManager.settings.collectAsState()
     val lapState by lapManager.state.collectAsState()
+
+    // Load saved settings on startup
+    LaunchedEffect(Unit) {
+        settingsRepository.zoneAlertSettings.collect { saved ->
+            alertManager.updateSettings(saved)
+        }
+    }
+    LaunchedEffect(Unit) {
+        settingsRepository.autoPauseSettings.collect { saved ->
+            autoPauseManager.updateSettings(saved)
+        }
+    }
+    LaunchedEffect(Unit) {
+        settingsRepository.voiceFeedbackSettings.collect { saved ->
+            voiceManager.updateSettings(saved)
+        }
+    }
+
+    // Save settings when they change
+    LaunchedEffect(alertSettings) {
+        settingsRepository.saveZoneAlertSettings(alertSettings)
+    }
+    LaunchedEffect(autoPauseSettings) {
+        settingsRepository.saveAutoPauseSettings(autoPauseSettings)
+    }
+    LaunchedEffect(voiceSettings) {
+        settingsRepository.saveVoiceFeedbackSettings(voiceSettings)
+    }
 
     // Add samples for lap tracking
     LaunchedEffect(activityData.heartRate, activityData.speed) {
