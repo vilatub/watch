@@ -18,7 +18,8 @@ This project enables live streaming of fitness metrics (heart rate, GPS, speed, 
 - **Cadence** (steps per minute)
 - **Power** (watts, if power meter available)
 - **Configurable streaming interval** (1s, 3s, 5s, 10s)
-- **GPX Export** for sharing activities
+- **GPX/TCX Export** for sharing activities
+- **Strava Upload** for sharing to Strava
 
 ## Architecture
 
@@ -164,7 +165,24 @@ Data is transmitted as a dictionary every 3 seconds:
 - [x] Export to GPX (with HR, cadence, power extensions)
 - [x] Training zones display (current zone indicator, zone time breakdown)
 - [x] Export to TCX (Training Center XML, Garmin Connect compatible)
-- [ ] Strava/Garmin Connect integration
+- [x] Strava integration (OAuth, activity upload)
+
+## Strava Integration
+
+To enable Strava upload functionality:
+
+1. Create a Strava API application at https://www.strava.com/settings/api
+2. Set the Authorization Callback Domain to `garminstreaming`
+3. Copy your Client ID and Client Secret
+4. Update the constants in `StravaClient.kt`:
+   ```kotlin
+   private const val CLIENT_ID = "YOUR_STRAVA_CLIENT_ID"
+   private const val CLIENT_SECRET = "YOUR_STRAVA_CLIENT_SECRET"
+   ```
+5. Build and run the app
+6. In session details, tap Share → "Connect to Strava"
+7. Authorize the app in your browser
+8. Upload activities directly from the app
 
 ## Troubleshooting
 
