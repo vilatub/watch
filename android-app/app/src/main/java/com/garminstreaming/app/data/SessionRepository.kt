@@ -108,7 +108,7 @@ class SessionRepository(context: Context) {
             maxPower = maxPower,
             trackPointsJson = gson.toJson(sessionTrackPoints),
             heartRateDataJson = gson.toJson(heartRateHistory),
-            activityType = "running"
+            activityType = currentData.activityType.name.lowercase()
         )
 
         sessionDao.updateSession(session)

@@ -159,7 +159,7 @@ Data is transmitted as a dictionary every 3 seconds:
 - [x] Custom streaming interval (watch app)
 
 ### Phase 3
-- [ ] Multiple activity types
+- [x] Multiple activity types (running, cycling, walking, hiking, swimming)
 - [ ] Export to GPX/FIT/TCX
 - [ ] Strava/Garmin Connect integration
 - [ ] Training zones display

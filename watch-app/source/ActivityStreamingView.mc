@@ -26,11 +26,22 @@ class ActivityStreamingView extends WatchUi.View {
     // Streaming interval in milliseconds (configurable)
     private var _streamInterval = 3000;
 
+    // Activity type
+    private var _activityType = "running";
+
     // Default intervals
     public static const INTERVAL_1S = 1000;
     public static const INTERVAL_3S = 3000;
     public static const INTERVAL_5S = 5000;
     public static const INTERVAL_10S = 10000;
+
+    // Activity types
+    public static const TYPE_RUNNING = "running";
+    public static const TYPE_CYCLING = "cycling";
+    public static const TYPE_WALKING = "walking";
+    public static const TYPE_HIKING = "hiking";
+    public static const TYPE_SWIMMING = "swimming";
+    public static const TYPE_OTHER = "other";
 
     function initialize() {
         View.initialize();
@@ -202,7 +213,8 @@ class ActivityStreamingView extends WatchUi.View {
             "altitude" => _altitude,
             "distance" => _distance,
             "cadence" => _cadence,
-            "power" => _power
+            "power" => _power,
+            "activity_type" => _activityType
         };
 
         // Send via Communications API to companion app
@@ -227,6 +239,14 @@ class ActivityStreamingView extends WatchUi.View {
 
     function getDistance() {
         return _distance;
+    }
+
+    function setActivityType(activityType) {
+        _activityType = activityType;
+    }
+
+    function getActivityType() {
+        return _activityType;
     }
 }
 
