@@ -40,6 +40,7 @@ import androidx.navigation.navArgument
 import com.garminstreaming.app.alerts.ZoneAlertManager
 import com.garminstreaming.app.autopause.AutoPauseManager
 import com.garminstreaming.app.data.SessionManager
+import com.garminstreaming.app.laps.LapManager
 import com.garminstreaming.app.ui.SessionDetailScreen
 import com.garminstreaming.app.ui.SessionHistoryScreen
 import com.garminstreaming.app.ui.StatisticsScreen
@@ -51,6 +52,10 @@ import com.garminstreaming.app.ui.AutoPauseSettingsPanel
 import com.garminstreaming.app.ui.PausedIndicator
 import com.garminstreaming.app.ui.VoiceFeedbackToggle
 import com.garminstreaming.app.ui.VoiceFeedbackSettingsPanel
+import com.garminstreaming.app.ui.LapButton
+import com.garminstreaming.app.ui.CurrentLapIndicator
+import com.garminstreaming.app.ui.LastLapSummary
+import com.garminstreaming.app.ui.LapHistoryPanel
 import com.garminstreaming.app.voice.VoiceFeedbackManager
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
@@ -190,17 +195,36 @@ fun ActivityStreamingScreen(
     val alertManager = remember { ZoneAlertManager.getInstance(context) }
     val autoPauseManager = remember { AutoPauseManager.getInstance() }
     val voiceManager = remember { VoiceFeedbackManager.getInstance(context) }
+    val lapManager = remember { LapManager.getInstance() }
     var isRecording by remember { mutableStateOf(false) }
     var showAlertSettings by remember { mutableStateOf(false) }
     var showAutoPauseSettings by remember { mutableStateOf(false) }
     var showVoiceSettings by remember { mutableStateOf(false) }
     var sessionStartTime by remember { mutableStateOf(0L) }
+    var showLastLap by remember { mutableStateOf(false) }
 
     val alertSettings by alertManager.settings.collectAsState()
     val alertState by alertManager.alertState.collectAsState()
     val autoPauseSettings by autoPauseManager.settings.collectAsState()
     val autoPauseState by autoPauseManager.state.collectAsState()
     val voiceSettings by voiceManager.settings.collectAsState()
+    val lapState by lapManager.state.collectAsState()
+
+    // Add samples for lap tracking
+    LaunchedEffect(activityData.heartRate, activityData.speed) {
+        if (isRecording) {
+            lapManager.addHeartRateSample(activityData.heartRate)
+            lapManager.addSpeedSample(activityData.speed)
+        }
+    }
+
+    // Auto-hide last lap summary after 5 seconds
+    LaunchedEffect(showLastLap) {
+        if (showLastLap) {
+            kotlinx.coroutines.delay(5000)
+            showLastLap = false
+        }
+    }
 
     // Check heart rate for alerts when data updates
     LaunchedEffect(activityData.heartRate) {
@@ -467,41 +491,85 @@ fun ActivityStreamingScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Record button
-        Button(
-            onClick = {
-                scope.launch {
-                    if (isRecording) {
-                        repository.stopSession()
-                        isRecording = false
-                    } else {
-                        repository.startSession()
-                        alertManager.reset()
-                        autoPauseManager.reset()
-                        voiceManager.reset()
-                        voiceManager.announceStart()
-                        sessionStartTime = System.currentTimeMillis()
-                        isRecording = true
-                    }
-                }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = if (isRecording) Color(0xFFF44336) else Color(0xFF4CAF50)
-            ),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Icon(
-                imageVector = if (isRecording) Icons.Default.Stop else Icons.Default.PlayArrow,
-                contentDescription = if (isRecording) "Stop" else "Start",
-                modifier = Modifier.size(24.dp)
+        // Current lap indicator
+        if (isRecording && lapState.currentLapNumber >= 1) {
+            CurrentLapIndicator(
+                lapState = lapState,
+                currentDistance = activityData.distance
             )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = if (isRecording) "Stop Recording" else "Start Recording",
-                style = MaterialTheme.typography.titleMedium
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        // Last lap summary (shown briefly after marking a lap)
+        if (showLastLap && lapState.lastLap != null) {
+            LastLapSummary(lap = lapState.lastLap!!)
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        // Lap history
+        if (lapState.laps.isNotEmpty()) {
+            LapHistoryPanel(laps = lapState.laps)
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        // Buttons row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Record button
+            Button(
+                onClick = {
+                    scope.launch {
+                        if (isRecording) {
+                            repository.stopSession()
+                            lapManager.reset()
+                            isRecording = false
+                        } else {
+                            repository.startSession()
+                            alertManager.reset()
+                            autoPauseManager.reset()
+                            voiceManager.reset()
+                            lapManager.startTracking()
+                            voiceManager.announceStart()
+                            sessionStartTime = System.currentTimeMillis()
+                            isRecording = true
+                        }
+                    }
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isRecording) Color(0xFFF44336) else Color(0xFF4CAF50)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    imageVector = if (isRecording) Icons.Default.Stop else Icons.Default.PlayArrow,
+                    contentDescription = if (isRecording) "Stop" else "Start",
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = if (isRecording) "Stop" else "Start",
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
+
+            // Lap button
+            LapButton(
+                isRecording = isRecording,
+                onLapClick = {
+                    val lap = lapManager.markLap(
+                        currentDistance = activityData.distance,
+                        currentHeartRate = activityData.heartRate
+                    )
+                    if (lap != null) {
+                        showLastLap = true
+                    }
+                },
+                modifier = Modifier.width(100.dp)
             )
         }
     }
