@@ -163,7 +163,7 @@ Data is transmitted as a dictionary every 3 seconds:
 - [x] Multiple activity types (running, cycling, walking, hiking, swimming)
 - [x] Export to GPX (with HR, cadence, power extensions)
 - [x] Training zones display (current zone indicator, zone time breakdown)
-- [ ] Export to FIT/TCX
+- [x] Export to TCX (Training Center XML, Garmin Connect compatible)
 - [ ] Strava/Garmin Connect integration
 
 ## Troubleshooting

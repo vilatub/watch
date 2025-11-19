@@ -27,6 +27,7 @@ import androidx.core.content.FileProvider
 import com.garminstreaming.app.data.ActivitySession
 import com.garminstreaming.app.data.SessionManager
 import com.garminstreaming.app.export.GpxExporter
+import com.garminstreaming.app.export.TcxExporter
 import com.garminstreaming.app.getHeartRateZoneColor
 import com.garminstreaming.app.HeartRateZone
 import com.garminstreaming.app.ZoneTimeData
@@ -47,6 +48,7 @@ fun SessionDetailScreen(
     val context = LocalContext.current
     val repository = remember { SessionManager.getInstance() }
     var session by remember { mutableStateOf<ActivitySession?>(null) }
+    var showExportMenu by remember { mutableStateOf(false) }
 
     LaunchedEffect(sessionId) {
         session = repository.getSessionById(sessionId)
@@ -63,16 +65,35 @@ fun SessionDetailScreen(
                 },
                 actions = {
                     session?.let { s ->
-                        IconButton(
-                            onClick = {
-                                exportSessionToGpx(context, s)
+                        Box {
+                            IconButton(
+                                onClick = { showExportMenu = true }
+                            ) {
+                                Icon(
+                                    Icons.Default.Share,
+                                    contentDescription = "Export",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
                             }
-                        ) {
-                            Icon(
-                                Icons.Default.Share,
-                                contentDescription = "Export GPX",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
+                            DropdownMenu(
+                                expanded = showExportMenu,
+                                onDismissRequest = { showExportMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Export as GPX") },
+                                    onClick = {
+                                        showExportMenu = false
+                                        exportSession(context, s, ExportFormat.GPX)
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Export as TCX") },
+                                    onClick = {
+                                        showExportMenu = false
+                                        exportSession(context, s, ExportFormat.TCX)
+                                    }
+                                )
+                            }
                         }
                     }
                 },
@@ -495,17 +516,37 @@ fun ZoneTimeBreakdown(
     }
 }
 
-private fun exportSessionToGpx(context: android.content.Context, session: ActivitySession) {
+/**
+ * Export format options
+ */
+enum class ExportFormat {
+    GPX, TCX
+}
+
+private fun exportSession(
+    context: android.content.Context,
+    session: ActivitySession,
+    format: ExportFormat
+) {
     try {
-        // Generate GPX content
-        val gpxContent = GpxExporter.export(session)
-        val filename = GpxExporter.generateFilename(session)
+        val (content, filename, mimeType) = when (format) {
+            ExportFormat.GPX -> Triple(
+                GpxExporter.export(session),
+                GpxExporter.generateFilename(session),
+                "application/gpx+xml"
+            )
+            ExportFormat.TCX -> Triple(
+                TcxExporter.export(session),
+                TcxExporter.generateFilename(session),
+                "application/vnd.garmin.tcx+xml"
+            )
+        }
 
         // Write to cache directory
         val cacheDir = File(context.cacheDir, "exports")
         cacheDir.mkdirs()
         val file = File(cacheDir, filename)
-        file.writeText(gpxContent)
+        file.writeText(content)
 
         // Create share intent using FileProvider
         val uri = FileProvider.getUriForFile(
@@ -515,13 +556,13 @@ private fun exportSessionToGpx(context: android.content.Context, session: Activi
         )
 
         val shareIntent = Intent(Intent.ACTION_SEND).apply {
-            type = "application/gpx+xml"
+            type = mimeType
             putExtra(Intent.EXTRA_STREAM, uri)
             putExtra(Intent.EXTRA_SUBJECT, "Activity Export - ${session.activityType}")
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
 
-        context.startActivity(Intent.createChooser(shareIntent, "Export GPX"))
+        context.startActivity(Intent.createChooser(shareIntent, "Export ${format.name}"))
     } catch (e: Exception) {
         e.printStackTrace()
     }
