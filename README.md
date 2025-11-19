@@ -172,7 +172,7 @@ Data is transmitted as a dictionary every 3 seconds:
 - [x] Home screen widget (total distance, duration, sessions count)
 - [x] Overall statistics screen (totals by activity type, weekly summary)
 - [x] Heart rate zone alerts (vibration when leaving target zone)
-- [ ] Auto-pause (pause when stopped)
+- [x] Auto-pause (pause when stopped)
 - [ ] Voice feedback (audio notifications for pace/HR)
 - [ ] Lap/interval tracking
 

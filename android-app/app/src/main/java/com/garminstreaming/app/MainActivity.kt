@@ -38,6 +38,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.garminstreaming.app.alerts.ZoneAlertManager
+import com.garminstreaming.app.autopause.AutoPauseManager
 import com.garminstreaming.app.data.SessionManager
 import com.garminstreaming.app.ui.SessionDetailScreen
 import com.garminstreaming.app.ui.SessionHistoryScreen
@@ -45,6 +46,9 @@ import com.garminstreaming.app.ui.StatisticsScreen
 import com.garminstreaming.app.ui.ZoneAlertToggle
 import com.garminstreaming.app.ui.ZoneAlertSettingsPanel
 import com.garminstreaming.app.ui.OutOfZoneWarning
+import com.garminstreaming.app.ui.AutoPauseToggle
+import com.garminstreaming.app.ui.AutoPauseSettingsPanel
+import com.garminstreaming.app.ui.PausedIndicator
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -181,16 +185,27 @@ fun ActivityStreamingScreen(
     val scope = rememberCoroutineScope()
     val repository = remember { SessionManager.getInstance() }
     val alertManager = remember { ZoneAlertManager.getInstance(context) }
+    val autoPauseManager = remember { AutoPauseManager.getInstance() }
     var isRecording by remember { mutableStateOf(false) }
     var showAlertSettings by remember { mutableStateOf(false) }
+    var showAutoPauseSettings by remember { mutableStateOf(false) }
 
     val alertSettings by alertManager.settings.collectAsState()
     val alertState by alertManager.alertState.collectAsState()
+    val autoPauseSettings by autoPauseManager.settings.collectAsState()
+    val autoPauseState by autoPauseManager.state.collectAsState()
 
     // Check heart rate for alerts when data updates
     LaunchedEffect(activityData.heartRate) {
         if (activityData.heartRate > 0) {
             alertManager.checkHeartRate(activityData.heartRate)
+        }
+    }
+
+    // Check speed for auto-pause when data updates
+    LaunchedEffect(activityData.speed) {
+        if (isRecording) {
+            autoPauseManager.checkSpeed(activityData.speed)
         }
     }
 
@@ -212,6 +227,14 @@ fun ActivityStreamingScreen(
             )
 
             Spacer(modifier = Modifier.width(8.dp))
+
+            // Auto-pause toggle
+            AutoPauseToggle(
+                autoPauseManager = autoPauseManager,
+                onExpandSettings = { showAutoPauseSettings = !showAutoPauseSettings }
+            )
+
+            Spacer(modifier = Modifier.width(4.dp))
 
             // Zone alert toggle
             ZoneAlertToggle(
@@ -244,6 +267,15 @@ fun ActivityStreamingScreen(
             }
         }
 
+        // Auto-pause settings panel (expandable)
+        if (showAutoPauseSettings) {
+            Spacer(modifier = Modifier.height(8.dp))
+            AutoPauseSettingsPanel(
+                autoPauseManager = autoPauseManager,
+                onDismiss = { showAutoPauseSettings = false }
+            )
+        }
+
         // Zone alert settings panel (expandable)
         if (showAlertSettings) {
             Spacer(modifier = Modifier.height(8.dp))
@@ -251,6 +283,12 @@ fun ActivityStreamingScreen(
                 alertManager = alertManager,
                 onDismiss = { showAlertSettings = false }
             )
+        }
+
+        // Paused indicator
+        if (autoPauseSettings.enabled && autoPauseState.isPaused) {
+            Spacer(modifier = Modifier.height(8.dp))
+            PausedIndicator(state = autoPauseState)
         }
 
         // Out of zone warning
@@ -402,6 +440,7 @@ fun ActivityStreamingScreen(
                     } else {
                         repository.startSession()
                         alertManager.reset()
+                        autoPauseManager.reset()
                         isRecording = true
                     }
                 }
