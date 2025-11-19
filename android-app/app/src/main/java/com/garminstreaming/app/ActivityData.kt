@@ -73,6 +73,71 @@ data class TrackPoint(
 )
 
 /**
+ * Heart rate training zones
+ */
+enum class HeartRateZone(
+    val zoneName: String,
+    val description: String,
+    val minPercent: Int,
+    val maxPercent: Int,
+    val color: Long
+) {
+    ZONE_1("Zone 1", "Recovery", 50, 60, 0xFF90CAF9),      // Light Blue
+    ZONE_2("Zone 2", "Endurance", 60, 70, 0xFF4CAF50),     // Green
+    ZONE_3("Zone 3", "Tempo", 70, 80, 0xFFFFEB3B),         // Yellow
+    ZONE_4("Zone 4", "Threshold", 80, 90, 0xFFFF9800),     // Orange
+    ZONE_5("Zone 5", "VO2 Max", 90, 100, 0xFFF44336);      // Red
+
+    companion object {
+        fun fromHeartRate(hr: Int, maxHr: Int): HeartRateZone {
+            if (hr <= 0 || maxHr <= 0) return ZONE_1
+            val percent = (hr.toFloat() / maxHr * 100).toInt()
+            return when {
+                percent < 60 -> ZONE_1
+                percent < 70 -> ZONE_2
+                percent < 80 -> ZONE_3
+                percent < 90 -> ZONE_4
+                else -> ZONE_5
+            }
+        }
+    }
+}
+
+/**
+ * Zone time distribution data
+ */
+data class ZoneTimeData(
+    val zone1Ms: Long = 0,
+    val zone2Ms: Long = 0,
+    val zone3Ms: Long = 0,
+    val zone4Ms: Long = 0,
+    val zone5Ms: Long = 0
+) {
+    val totalMs: Long get() = zone1Ms + zone2Ms + zone3Ms + zone4Ms + zone5Ms
+
+    fun getZoneTime(zone: HeartRateZone): Long = when (zone) {
+        HeartRateZone.ZONE_1 -> zone1Ms
+        HeartRateZone.ZONE_2 -> zone2Ms
+        HeartRateZone.ZONE_3 -> zone3Ms
+        HeartRateZone.ZONE_4 -> zone4Ms
+        HeartRateZone.ZONE_5 -> zone5Ms
+    }
+
+    fun getZonePercent(zone: HeartRateZone): Float {
+        if (totalMs == 0L) return 0f
+        return (getZoneTime(zone).toFloat() / totalMs) * 100
+    }
+
+    fun formatZoneTime(zone: HeartRateZone): String {
+        val ms = getZoneTime(zone)
+        val totalSeconds = (ms / 1000).toInt()
+        val minutes = totalSeconds / 60
+        val seconds = totalSeconds % 60
+        return "%d:%02d".format(minutes, seconds)
+    }
+}
+
+/**
  * Repository for managing activity data state
  */
 object ActivityRepository {

@@ -2,6 +2,7 @@ package com.garminstreaming.app.data
 
 import android.content.Context
 import com.garminstreaming.app.ActivityRepository
+import com.garminstreaming.app.HeartRateZone
 import com.garminstreaming.app.TrackPoint
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
@@ -68,6 +69,33 @@ class SessionRepository(context: Context) {
         val maxHr = hrValues.maxOrNull() ?: 0
         val minHr = hrValues.minOrNull() ?: 0
 
+        // Calculate zone times (using 190 as default max HR)
+        val userMaxHr = 190
+        var zone1Time = 0L
+        var zone2Time = 0L
+        var zone3Time = 0L
+        var zone4Time = 0L
+        var zone5Time = 0L
+
+        if (heartRateHistory.size >= 2) {
+            for (i in 0 until heartRateHistory.size - 1) {
+                val (timestamp, hr) = heartRateHistory[i]
+                val nextTimestamp = heartRateHistory[i + 1].first
+                val duration = nextTimestamp - timestamp
+
+                if (duration > 0 && hr > 0) {
+                    val zone = HeartRateZone.fromHeartRate(hr, userMaxHr)
+                    when (zone) {
+                        HeartRateZone.ZONE_1 -> zone1Time += duration
+                        HeartRateZone.ZONE_2 -> zone2Time += duration
+                        HeartRateZone.ZONE_3 -> zone3Time += duration
+                        HeartRateZone.ZONE_4 -> zone4Time += duration
+                        HeartRateZone.ZONE_5 -> zone5Time += duration
+                    }
+                }
+            }
+        }
+
         val speeds = trackPoints.map {
             // Calculate speed from track points if not stored
             0.0 // Will be improved with actual speed data
@@ -108,7 +136,12 @@ class SessionRepository(context: Context) {
             maxPower = maxPower,
             trackPointsJson = gson.toJson(sessionTrackPoints),
             heartRateDataJson = gson.toJson(heartRateHistory),
-            activityType = currentData.activityType.name.lowercase()
+            activityType = currentData.activityType.name.lowercase(),
+            zone1TimeMs = zone1Time,
+            zone2TimeMs = zone2Time,
+            zone3TimeMs = zone3Time,
+            zone4TimeMs = zone4Time,
+            zone5TimeMs = zone5Time
         )
 
         sessionDao.updateSession(session)
