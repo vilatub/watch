@@ -20,6 +20,7 @@ This project enables live streaming of fitness metrics (heart rate, GPS, speed, 
 - **Configurable streaming interval** (1s, 3s, 5s, 10s)
 - **GPX/TCX Export** for sharing activities
 - **Strava Upload** for sharing to Strava
+- **Home Screen Widget** with activity stats
 
 ## Architecture
 
@@ -166,6 +167,14 @@ Data is transmitted as a dictionary every 3 seconds:
 - [x] Training zones display (current zone indicator, zone time breakdown)
 - [x] Export to TCX (Training Center XML, Garmin Connect compatible)
 - [x] Strava integration (OAuth, activity upload)
+
+### Phase 4
+- [x] Home screen widget (total distance, duration, sessions count)
+- [ ] Overall statistics screen (totals by activity type)
+- [ ] Heart rate zone alerts (vibration when leaving target zone)
+- [ ] Auto-pause (pause when stopped)
+- [ ] Voice feedback (audio notifications for pace/HR)
+- [ ] Lap/interval tracking
 
 ## Strava Integration
 
