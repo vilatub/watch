@@ -141,14 +141,16 @@ class GarminListenerService : Service() {
                 longitude = (dataMap["lon"] as? Number)?.toDouble() ?: 0.0,
                 speed = (dataMap["speed"] as? Number)?.toDouble() ?: 0.0,
                 altitude = (dataMap["altitude"] as? Number)?.toDouble() ?: 0.0,
-                distance = (dataMap["distance"] as? Number)?.toDouble() ?: 0.0
+                distance = (dataMap["distance"] as? Number)?.toDouble() ?: 0.0,
+                cadence = (dataMap["cadence"] as? Number)?.toInt() ?: 0,
+                power = (dataMap["power"] as? Number)?.toInt() ?: 0
             )
 
             ActivityRepository.updateData(activityData)
             ActivityRepository.setConnectionStatus(ConnectionStatus.STREAMING)
 
             Log.d(TAG, "Activity data: HR=${activityData.heartRate}, " +
-                    "Lat=${activityData.latitude}, Lon=${activityData.longitude}")
+                    "Cad=${activityData.cadence}, Pwr=${activityData.power}")
 
         } catch (e: Exception) {
             Log.e(TAG, "Failed to process message", e)

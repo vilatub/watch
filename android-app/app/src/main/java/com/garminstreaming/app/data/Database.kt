@@ -43,6 +43,18 @@ data class ActivitySession(
     @ColumnInfo(name = "elevation_gain")
     val elevationGain: Double = 0.0,
 
+    @ColumnInfo(name = "avg_cadence")
+    val avgCadence: Int = 0,
+
+    @ColumnInfo(name = "max_cadence")
+    val maxCadence: Int = 0,
+
+    @ColumnInfo(name = "avg_power")
+    val avgPower: Int = 0,
+
+    @ColumnInfo(name = "max_power")
+    val maxPower: Int = 0,
+
     @ColumnInfo(name = "track_points")
     val trackPointsJson: String = "[]",
 
@@ -100,7 +112,9 @@ data class SessionTrackPoint(
     val timestamp: Long,
     val heartRate: Int,
     val altitude: Double = 0.0,
-    val speed: Double = 0.0
+    val speed: Double = 0.0,
+    val cadence: Int = 0,
+    val power: Int = 0
 )
 
 /**
@@ -141,7 +155,7 @@ interface ActivitySessionDao {
  */
 @Database(
     entities = [ActivitySession::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -157,7 +171,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "garmin_streaming_db"
-                ).build()
+                )
+                    .fallbackToDestructiveMigration()
+                    .build()
                 INSTANCE = instance
                 instance
             }

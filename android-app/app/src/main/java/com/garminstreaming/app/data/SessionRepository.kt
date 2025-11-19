@@ -83,6 +83,12 @@ class SessionRepository(context: Context) {
             )
         }
 
+        // For now, use current values as averages (TODO: track history for proper averaging)
+        val avgCadence = currentData.cadence
+        val maxCadence = currentData.cadence
+        val avgPower = currentData.power
+        val maxPower = currentData.power
+
         val session = ActivitySession(
             id = sessionId,
             startTime = sessionStartTime,
@@ -96,6 +102,10 @@ class SessionRepository(context: Context) {
                 currentData.distance / ((endTime - sessionStartTime) / 1000.0)
             } else 0.0,
             maxSpeed = currentData.speed,
+            avgCadence = avgCadence,
+            maxCadence = maxCadence,
+            avgPower = avgPower,
+            maxPower = maxPower,
             trackPointsJson = gson.toJson(sessionTrackPoints),
             heartRateDataJson = gson.toJson(heartRateHistory),
             activityType = "running"
