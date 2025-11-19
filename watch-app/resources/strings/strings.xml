@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<strings>
+    <string id="AppName">Activity Stream</string>
+    <string id="StartActivity">Start</string>
+    <string id="StopActivity">Stop</string>
+    <string id="Connecting">Connecting...</string>
+    <string id="Connected">Connected</string>
+    <string id="Disconnected">Disconnected</string>
+    <string id="NoGPS">No GPS</string>
+    <string id="NoHR">No HR</string>
+</strings>

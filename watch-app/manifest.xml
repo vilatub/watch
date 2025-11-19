@@ -1,0 +1,57 @@
+<?xml version="1.0"?>
+<iq:manifest xmlns:iq="http://www.garmin.com/xml/connectiq" version="3">
+    <iq:application entry="ActivityStreamingApp"
+                    id="a3421fe8-d665-4df2-b2d3-123456789abc"
+                    launcherIcon="@Drawables.LauncherIcon"
+                    minSdkVersion="3.2.0"
+                    name="@Strings.AppName"
+                    type="watch-app"
+                    version="1.0.0">
+
+        <iq:products>
+            <!-- Fenix series -->
+            <iq:product id="fenix5"/>
+            <iq:product id="fenix5plus"/>
+            <iq:product id="fenix5s"/>
+            <iq:product id="fenix5splus"/>
+            <iq:product id="fenix5x"/>
+            <iq:product id="fenix5xplus"/>
+            <iq:product id="fenix6"/>
+            <iq:product id="fenix6pro"/>
+            <iq:product id="fenix6s"/>
+            <iq:product id="fenix6spro"/>
+            <iq:product id="fenix6xpro"/>
+            <iq:product id="fenix7"/>
+            <iq:product id="fenix7pro"/>
+            <iq:product id="fenix7s"/>
+            <iq:product id="fenix7x"/>
+            <!-- Forerunner series -->
+            <iq:product id="fr245"/>
+            <iq:product id="fr255"/>
+            <iq:product id="fr265"/>
+            <iq:product id="fr745"/>
+            <iq:product id="fr945"/>
+            <iq:product id="fr955"/>
+            <iq:product id="fr965"/>
+            <!-- Venu series -->
+            <iq:product id="venu"/>
+            <iq:product id="venu2"/>
+            <iq:product id="venu2plus"/>
+            <iq:product id="venu3"/>
+        </iq:products>
+
+        <iq:permissions>
+            <iq:uses-permission id="Sensor:Sensor.SENSOR_HEARTRATE"/>
+            <iq:uses-permission id="Positioning"/>
+            <iq:uses-permission id="Communications"/>
+            <iq:uses-permission id="FitRecording"/>
+        </iq:permissions>
+
+        <iq:languages>
+            <iq:language>eng</iq:language>
+            <iq:language>rus</iq:language>
+        </iq:languages>
+
+        <iq:barrels/>
+    </iq:application>
+</iq:manifest>
