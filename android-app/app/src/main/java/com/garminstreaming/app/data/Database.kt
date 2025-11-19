@@ -174,6 +174,93 @@ interface ActivitySessionDao {
 
     @Query("SELECT SUM(duration_ms) FROM activity_sessions")
     suspend fun getTotalDuration(): Long?
+
+    // Statistics by activity type
+    @Query("""
+        SELECT activity_type as activityType,
+               COUNT(*) as sessionCount,
+               SUM(distance_meters) as totalDistance,
+               SUM(duration_ms) as totalDuration,
+               AVG(avg_heart_rate) as avgHeartRate,
+               MAX(max_heart_rate) as maxHeartRate,
+               SUM(elevation_gain) as totalElevationGain,
+               AVG(avg_speed) as avgSpeed,
+               MAX(max_speed) as maxSpeed,
+               AVG(avg_cadence) as avgCadence,
+               AVG(avg_power) as avgPower
+        FROM activity_sessions
+        GROUP BY activity_type
+        ORDER BY totalDistance DESC
+    """)
+    suspend fun getStatsByActivityType(): List<ActivityTypeStats>
+
+    // Weekly statistics
+    @Query("""
+        SELECT COUNT(*) as sessionCount,
+               SUM(distance_meters) as totalDistance,
+               SUM(duration_ms) as totalDuration
+        FROM activity_sessions
+        WHERE start_time >= :startOfWeek
+    """)
+    suspend fun getWeeklyStats(startOfWeek: Long): WeeklyStats
+
+    // Get all sessions for a specific activity type
+    @Query("SELECT * FROM activity_sessions WHERE activity_type = :activityType ORDER BY start_time DESC")
+    fun getSessionsByType(activityType: String): Flow<List<ActivitySession>>
+}
+
+/**
+ * Statistics by activity type
+ */
+data class ActivityTypeStats(
+    val activityType: String,
+    val sessionCount: Int,
+    val totalDistance: Double,
+    val totalDuration: Long,
+    val avgHeartRate: Double,
+    val maxHeartRate: Int,
+    val totalElevationGain: Double,
+    val avgSpeed: Double,
+    val maxSpeed: Double,
+    val avgCadence: Double,
+    val avgPower: Double
+) {
+    val totalDistanceKm: Double get() = totalDistance / 1000.0
+
+    val totalDurationFormatted: String get() {
+        val totalSeconds = totalDuration / 1000
+        val hours = totalSeconds / 3600
+        val minutes = (totalSeconds % 3600) / 60
+        return if (hours > 0) "%dh %dm".format(hours, minutes) else "%dm".format(minutes)
+    }
+
+    val avgSpeedKmh: Double get() = avgSpeed * 3.6
+
+    val avgPaceFormatted: String get() {
+        if (avgSpeed <= 0) return "--:--"
+        val paceSeconds = (1000.0 / avgSpeed).toInt()
+        val minutes = paceSeconds / 60
+        val seconds = paceSeconds % 60
+        return "%d:%02d".format(minutes, seconds)
+    }
+}
+
+/**
+ * Weekly statistics summary
+ */
+data class WeeklyStats(
+    val sessionCount: Int,
+    val totalDistance: Double,
+    val totalDuration: Long
+) {
+    val totalDistanceKm: Double get() = totalDistance / 1000.0
+
+    val totalDurationFormatted: String get() {
+        val totalSeconds = totalDuration / 1000
+        val hours = totalSeconds / 3600
+        val minutes = (totalSeconds % 3600) / 60
+        return if (hours > 0) "%dh %dm".format(hours, minutes) else "%dm".format(minutes)
+    }
 }
 
 /**
