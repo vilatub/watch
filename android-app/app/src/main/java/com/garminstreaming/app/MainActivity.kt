@@ -37,10 +37,14 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.garminstreaming.app.alerts.ZoneAlertManager
 import com.garminstreaming.app.data.SessionManager
 import com.garminstreaming.app.ui.SessionDetailScreen
 import com.garminstreaming.app.ui.SessionHistoryScreen
 import com.garminstreaming.app.ui.StatisticsScreen
+import com.garminstreaming.app.ui.ZoneAlertToggle
+import com.garminstreaming.app.ui.ZoneAlertSettingsPanel
+import com.garminstreaming.app.ui.OutOfZoneWarning
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -168,6 +172,7 @@ fun ActivityStreamingScreen(
     onNavigateToHistory: () -> Unit = {},
     onNavigateToStatistics: () -> Unit = {}
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val activityData by ActivityRepository.currentData.collectAsState()
     val connectionStatus by ActivityRepository.connectionStatus.collectAsState()
     val trackPoints by ActivityRepository.trackPoints.collectAsState()
@@ -175,7 +180,19 @@ fun ActivityStreamingScreen(
 
     val scope = rememberCoroutineScope()
     val repository = remember { SessionManager.getInstance() }
+    val alertManager = remember { ZoneAlertManager.getInstance(context) }
     var isRecording by remember { mutableStateOf(false) }
+    var showAlertSettings by remember { mutableStateOf(false) }
+
+    val alertSettings by alertManager.settings.collectAsState()
+    val alertState by alertManager.alertState.collectAsState()
+
+    // Check heart rate for alerts when data updates
+    LaunchedEffect(activityData.heartRate) {
+        if (activityData.heartRate > 0) {
+            alertManager.checkHeartRate(activityData.heartRate)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -195,6 +212,14 @@ fun ActivityStreamingScreen(
             )
 
             Spacer(modifier = Modifier.width(8.dp))
+
+            // Zone alert toggle
+            ZoneAlertToggle(
+                alertManager = alertManager,
+                onExpandSettings = { showAlertSettings = !showAlertSettings }
+            )
+
+            Spacer(modifier = Modifier.width(4.dp))
 
             // Statistics button
             IconButton(
@@ -217,6 +242,21 @@ fun ActivityStreamingScreen(
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
+        }
+
+        // Zone alert settings panel (expandable)
+        if (showAlertSettings) {
+            Spacer(modifier = Modifier.height(8.dp))
+            ZoneAlertSettingsPanel(
+                alertManager = alertManager,
+                onDismiss = { showAlertSettings = false }
+            )
+        }
+
+        // Out of zone warning
+        if (alertSettings.enabled && !alertState.isInTargetZone && activityData.heartRate > 0) {
+            Spacer(modifier = Modifier.height(8.dp))
+            OutOfZoneWarning(alertState = alertState)
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -361,6 +401,7 @@ fun ActivityStreamingScreen(
                         isRecording = false
                     } else {
                         repository.startSession()
+                        alertManager.reset()
                         isRecording = true
                     }
                 }
