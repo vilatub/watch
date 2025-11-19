@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -57,6 +58,7 @@ import com.garminstreaming.app.ui.LapButton
 import com.garminstreaming.app.ui.CurrentLapIndicator
 import com.garminstreaming.app.ui.LastLapSummary
 import com.garminstreaming.app.ui.LapHistoryPanel
+import com.garminstreaming.app.ui.IntervalScreen
 import com.garminstreaming.app.voice.VoiceFeedbackManager
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
@@ -145,6 +147,9 @@ fun AppNavigation() {
                 },
                 onNavigateToStatistics = {
                     navController.navigate("statistics")
+                },
+                onNavigateToIntervals = {
+                    navController.navigate("intervals")
                 }
             )
         }
@@ -160,6 +165,13 @@ fun AppNavigation() {
         }
         composable("statistics") {
             StatisticsScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+        composable("intervals") {
+            IntervalScreen(
                 onNavigateBack = {
                     navController.popBackStack()
                 }
@@ -183,7 +195,8 @@ fun AppNavigation() {
 @Composable
 fun ActivityStreamingScreen(
     onNavigateToHistory: () -> Unit = {},
-    onNavigateToStatistics: () -> Unit = {}
+    onNavigateToStatistics: () -> Unit = {},
+    onNavigateToIntervals: () -> Unit = {}
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val activityData by ActivityRepository.currentData.collectAsState()
@@ -325,6 +338,17 @@ fun ActivityStreamingScreen(
             )
 
             Spacer(modifier = Modifier.width(4.dp))
+
+            // Intervals button
+            IconButton(
+                onClick = onNavigateToIntervals
+            ) {
+                Icon(
+                    Icons.Default.Timer,
+                    contentDescription = "Intervals",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
 
             // Statistics button
             IconButton(

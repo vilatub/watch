@@ -178,7 +178,7 @@ Data is transmitted as a dictionary every 3 seconds:
 
 ### Phase 5
 - [x] Settings persistence (DataStore)
-- [ ] Interval training (programmable work/rest periods)
+- [x] Interval training (programmable work/rest periods)
 - [ ] Watch app improvements
 
 ## Strava Integration
