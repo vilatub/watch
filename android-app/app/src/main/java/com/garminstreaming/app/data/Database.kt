@@ -4,6 +4,7 @@ import androidx.room.*
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
+import com.garminstreaming.app.ZoneTimeData
 
 /**
  * Entity representing a recorded activity session
@@ -62,8 +63,33 @@ data class ActivitySession(
     val heartRateDataJson: String = "[]",
 
     @ColumnInfo(name = "activity_type")
-    val activityType: String = "running"
+    val activityType: String = "running",
+
+    // Heart rate zone time in milliseconds
+    @ColumnInfo(name = "zone1_time_ms")
+    val zone1TimeMs: Long = 0,
+
+    @ColumnInfo(name = "zone2_time_ms")
+    val zone2TimeMs: Long = 0,
+
+    @ColumnInfo(name = "zone3_time_ms")
+    val zone3TimeMs: Long = 0,
+
+    @ColumnInfo(name = "zone4_time_ms")
+    val zone4TimeMs: Long = 0,
+
+    @ColumnInfo(name = "zone5_time_ms")
+    val zone5TimeMs: Long = 0
 ) {
+    // Zone time data helper
+    val zoneTimeData: ZoneTimeData
+        get() = ZoneTimeData(
+            zone1Ms = zone1TimeMs,
+            zone2Ms = zone2TimeMs,
+            zone3Ms = zone3TimeMs,
+            zone4Ms = zone4TimeMs,
+            zone5Ms = zone5TimeMs
+        )
     // Helper properties for serialization
     val trackPoints: List<SessionTrackPoint>
         get() {
@@ -155,7 +181,7 @@ interface ActivitySessionDao {
  */
 @Database(
     entities = [ActivitySession::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

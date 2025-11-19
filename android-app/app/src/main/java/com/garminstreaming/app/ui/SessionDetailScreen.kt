@@ -2,6 +2,7 @@ package com.garminstreaming.app.ui
 
 import android.content.Intent
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,6 +28,8 @@ import com.garminstreaming.app.data.ActivitySession
 import com.garminstreaming.app.data.SessionManager
 import com.garminstreaming.app.export.GpxExporter
 import com.garminstreaming.app.getHeartRateZoneColor
+import com.garminstreaming.app.HeartRateZone
+import com.garminstreaming.app.ZoneTimeData
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
@@ -175,6 +178,24 @@ fun SessionDetailScreen(
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
+
+                    // Zone time breakdown
+                    val zoneData = s.zoneTimeData
+                    if (zoneData.totalMs > 0) {
+                        Text(
+                            text = "Zone Distribution",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        ZoneTimeBreakdown(
+                            zoneTimeData = zoneData,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
                 }
 
                 // Map section
@@ -385,6 +406,93 @@ fun SessionMapView(
 private fun formatFullDate(timestamp: Long): String {
     val sdf = SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault())
     return sdf.format(Date(timestamp))
+}
+
+@Composable
+fun ZoneTimeBreakdown(
+    zoneTimeData: ZoneTimeData,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp)
+        ) {
+            HeartRateZone.entries.forEach { zone ->
+                val percent = zoneTimeData.getZonePercent(zone)
+                val timeFormatted = zoneTimeData.formatZoneTime(zone)
+                val zoneColor = Color(zone.color)
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Zone label
+                    Text(
+                        text = zone.zoneName,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = zoneColor,
+                        modifier = Modifier.width(50.dp)
+                    )
+
+                    // Progress bar
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(16.dp)
+                            .padding(horizontal = 8.dp)
+                    ) {
+                        // Background
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    color = zoneColor.copy(alpha = 0.2f),
+                                    shape = RoundedCornerShape(4.dp)
+                                )
+                        )
+                        // Fill
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .fillMaxWidth(fraction = (percent / 100f).coerceIn(0f, 1f))
+                                .background(
+                                    color = zoneColor,
+                                    shape = RoundedCornerShape(4.dp)
+                                )
+                        )
+                    }
+
+                    // Time and percent
+                    Column(
+                        horizontalAlignment = Alignment.End,
+                        modifier = Modifier.width(60.dp)
+                    ) {
+                        Text(
+                            text = timeFormatted,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "%.0f%%".format(percent),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = zoneColor,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
 
 private fun exportSessionToGpx(context: android.content.Context, session: ActivitySession) {

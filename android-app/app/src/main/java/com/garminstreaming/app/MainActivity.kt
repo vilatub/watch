@@ -223,6 +223,17 @@ fun ActivityStreamingScreen(
             )
         }
 
+        // Current Zone Indicator
+        if (activityData.heartRate > 0) {
+            val currentZone = HeartRateZone.fromHeartRate(activityData.heartRate, 190)
+            CurrentZoneIndicator(
+                zone = currentZone,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+            )
+        }
+
         Spacer(modifier = Modifier.height(8.dp))
 
         // Secondary metrics
@@ -582,6 +593,45 @@ fun MetricCard(
                 )
             }
         }
+    }
+}
+
+@Composable
+fun CurrentZoneIndicator(
+    zone: HeartRateZone,
+    modifier: Modifier = Modifier
+) {
+    val zoneColor = Color(zone.color)
+
+    Row(
+        modifier = modifier
+            .background(
+                color = zoneColor.copy(alpha = 0.2f),
+                shape = RoundedCornerShape(8.dp)
+            )
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(12.dp)
+                .clip(CircleShape)
+                .background(zoneColor)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = zone.zoneName,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = zoneColor
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = zone.description,
+            style = MaterialTheme.typography.bodySmall,
+            color = zoneColor.copy(alpha = 0.8f)
+        )
     }
 }
 
