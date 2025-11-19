@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Garmin Activity Streaming</string>
+    <string name="widget_name">Activity Stats</string>
+    <string name="widget_description">Shows your activity statistics and quick access to the app</string>
 </resources>
