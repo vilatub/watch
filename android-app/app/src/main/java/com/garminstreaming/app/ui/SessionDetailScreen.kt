@@ -1,5 +1,6 @@
 package com.garminstreaming.app.ui
 
+import android.content.Intent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -7,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,17 +17,21 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.FileProvider
 import com.garminstreaming.app.data.ActivitySession
 import com.garminstreaming.app.data.SessionManager
+import com.garminstreaming.app.export.GpxExporter
 import com.garminstreaming.app.getHeartRateZoneColor
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Polyline
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -35,6 +41,7 @@ fun SessionDetailScreen(
     sessionId: Long,
     onNavigateBack: () -> Unit
 ) {
+    val context = LocalContext.current
     val repository = remember { SessionManager.getInstance() }
     var session by remember { mutableStateOf<ActivitySession?>(null) }
 
@@ -49,6 +56,21 @@ fun SessionDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    session?.let { s ->
+                        IconButton(
+                            onClick = {
+                                exportSessionToGpx(context, s)
+                            }
+                        ) {
+                            Icon(
+                                Icons.Default.Share,
+                                contentDescription = "Export GPX",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -363,4 +385,36 @@ fun SessionMapView(
 private fun formatFullDate(timestamp: Long): String {
     val sdf = SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault())
     return sdf.format(Date(timestamp))
+}
+
+private fun exportSessionToGpx(context: android.content.Context, session: ActivitySession) {
+    try {
+        // Generate GPX content
+        val gpxContent = GpxExporter.export(session)
+        val filename = GpxExporter.generateFilename(session)
+
+        // Write to cache directory
+        val cacheDir = File(context.cacheDir, "exports")
+        cacheDir.mkdirs()
+        val file = File(cacheDir, filename)
+        file.writeText(gpxContent)
+
+        // Create share intent using FileProvider
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file
+        )
+
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/gpx+xml"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_SUBJECT, "Activity Export - ${session.activityType}")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+
+        context.startActivity(Intent.createChooser(shareIntent, "Export GPX"))
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
 }

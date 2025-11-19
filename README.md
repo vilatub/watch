@@ -18,6 +18,7 @@ This project enables live streaming of fitness metrics (heart rate, GPS, speed, 
 - **Cadence** (steps per minute)
 - **Power** (watts, if power meter available)
 - **Configurable streaming interval** (1s, 3s, 5s, 10s)
+- **GPX Export** for sharing activities
 
 ## Architecture
 
@@ -160,7 +161,8 @@ Data is transmitted as a dictionary every 3 seconds:
 
 ### Phase 3
 - [x] Multiple activity types (running, cycling, walking, hiking, swimming)
-- [ ] Export to GPX/FIT/TCX
+- [x] Export to GPX (with HR, cadence, power extensions)
+- [ ] Export to FIT/TCX
 - [ ] Strava/Garmin Connect integration
 - [ ] Training zones display
 
