@@ -149,7 +149,9 @@ Data is transmitted as a dictionary every 3 seconds:
 ### Phase 2
 - [x] Real-time heart rate graph
 - [x] Heart rate zones coloring
-- [ ] Session history storage
+- [x] Session history storage (Room database)
+- [x] Session recording with start/stop
+- [x] Session list and detail views
 - [ ] More metrics (cadence, power)
 - [ ] Custom streaming interval
 

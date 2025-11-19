@@ -12,6 +12,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,6 +31,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.garminstreaming.app.data.SessionManager
+import com.garminstreaming.app.ui.SessionDetailScreen
+import com.garminstreaming.app.ui.SessionHistoryScreen
+import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -50,6 +63,9 @@ class MainActivity : ComponentActivity() {
         // Initialize OSMDroid
         Configuration.getInstance().userAgentValue = packageName
 
+        // Initialize SessionManager
+        SessionManager.initialize(this)
+
         checkPermissionsAndStart()
 
         setContent {
@@ -60,7 +76,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    ActivityStreamingScreen()
+                    AppNavigation()
                 }
             }
         }
@@ -96,19 +112,88 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun ActivityStreamingScreen() {
+fun AppNavigation() {
+    val navController = rememberNavController()
+
+    NavHost(
+        navController = navController,
+        startDestination = "main"
+    ) {
+        composable("main") {
+            ActivityStreamingScreen(
+                onNavigateToHistory = {
+                    navController.navigate("history")
+                }
+            )
+        }
+        composable("history") {
+            SessionHistoryScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onSessionClick = { sessionId ->
+                    navController.navigate("session/$sessionId")
+                }
+            )
+        }
+        composable(
+            route = "session/{sessionId}",
+            arguments = listOf(navArgument("sessionId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val sessionId = backStackEntry.arguments?.getLong("sessionId") ?: 0L
+            SessionDetailScreen(
+                sessionId = sessionId,
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun ActivityStreamingScreen(
+    onNavigateToHistory: () -> Unit = {}
+) {
     val activityData by ActivityRepository.currentData.collectAsState()
     val connectionStatus by ActivityRepository.connectionStatus.collectAsState()
     val trackPoints by ActivityRepository.trackPoints.collectAsState()
     val heartRateHistory by ActivityRepository.heartRateHistory.collectAsState()
+
+    val scope = rememberCoroutineScope()
+    val repository = remember { SessionManager.getInstance() }
+    var isRecording by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        // Connection status
-        ConnectionStatusBar(connectionStatus)
+        // Top bar with history button
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Connection status
+            ConnectionStatusBar(
+                status = connectionStatus,
+                modifier = Modifier.weight(1f)
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // History button
+            IconButton(
+                onClick = onNavigateToHistory
+            ) {
+                Icon(
+                    Icons.Default.History,
+                    contentDescription = "History",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -201,6 +286,41 @@ fun ActivityStreamingScreen() {
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center
         )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Record button
+        Button(
+            onClick = {
+                scope.launch {
+                    if (isRecording) {
+                        repository.stopSession()
+                        isRecording = false
+                    } else {
+                        repository.startSession()
+                        isRecording = true
+                    }
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isRecording) Color(0xFFF44336) else Color(0xFF4CAF50)
+            ),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(
+                imageVector = if (isRecording) Icons.Default.Stop else Icons.Default.PlayArrow,
+                contentDescription = if (isRecording) "Stop" else "Start",
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = if (isRecording) "Stop Recording" else "Start Recording",
+                style = MaterialTheme.typography.titleMedium
+            )
+        }
     }
 }
 
@@ -353,7 +473,10 @@ fun HeartRateGraph(
 }
 
 @Composable
-fun ConnectionStatusBar(status: ConnectionStatus) {
+fun ConnectionStatusBar(
+    status: ConnectionStatus,
+    modifier: Modifier = Modifier
+) {
     val (statusText, statusColor) = when (status) {
         ConnectionStatus.DISCONNECTED -> "Disconnected" to Color.Gray
         ConnectionStatus.CONNECTING -> "Connecting..." to Color.Yellow
@@ -362,8 +485,7 @@ fun ConnectionStatusBar(status: ConnectionStatus) {
     }
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
+        modifier = modifier
             .background(
                 color = statusColor.copy(alpha = 0.2f),
                 shape = RoundedCornerShape(8.dp)
