@@ -49,6 +49,9 @@ import com.garminstreaming.app.ui.OutOfZoneWarning
 import com.garminstreaming.app.ui.AutoPauseToggle
 import com.garminstreaming.app.ui.AutoPauseSettingsPanel
 import com.garminstreaming.app.ui.PausedIndicator
+import com.garminstreaming.app.ui.VoiceFeedbackToggle
+import com.garminstreaming.app.ui.VoiceFeedbackSettingsPanel
+import com.garminstreaming.app.voice.VoiceFeedbackManager
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -186,14 +189,18 @@ fun ActivityStreamingScreen(
     val repository = remember { SessionManager.getInstance() }
     val alertManager = remember { ZoneAlertManager.getInstance(context) }
     val autoPauseManager = remember { AutoPauseManager.getInstance() }
+    val voiceManager = remember { VoiceFeedbackManager.getInstance(context) }
     var isRecording by remember { mutableStateOf(false) }
     var showAlertSettings by remember { mutableStateOf(false) }
     var showAutoPauseSettings by remember { mutableStateOf(false) }
+    var showVoiceSettings by remember { mutableStateOf(false) }
+    var sessionStartTime by remember { mutableStateOf(0L) }
 
     val alertSettings by alertManager.settings.collectAsState()
     val alertState by alertManager.alertState.collectAsState()
     val autoPauseSettings by autoPauseManager.settings.collectAsState()
     val autoPauseState by autoPauseManager.state.collectAsState()
+    val voiceSettings by voiceManager.settings.collectAsState()
 
     // Check heart rate for alerts when data updates
     LaunchedEffect(activityData.heartRate) {
@@ -206,6 +213,19 @@ fun ActivityStreamingScreen(
     LaunchedEffect(activityData.speed) {
         if (isRecording) {
             autoPauseManager.checkSpeed(activityData.speed)
+        }
+    }
+
+    // Check for voice announcements
+    LaunchedEffect(activityData.distance) {
+        if (isRecording && sessionStartTime > 0) {
+            val elapsedMs = System.currentTimeMillis() - sessionStartTime
+            voiceManager.checkAndAnnounce(
+                distanceKm = activityData.distanceKm,
+                paceFormatted = activityData.paceFormatted,
+                heartRate = activityData.heartRate,
+                elapsedMs = elapsedMs
+            )
         }
     }
 
@@ -240,6 +260,14 @@ fun ActivityStreamingScreen(
             ZoneAlertToggle(
                 alertManager = alertManager,
                 onExpandSettings = { showAlertSettings = !showAlertSettings }
+            )
+
+            Spacer(modifier = Modifier.width(4.dp))
+
+            // Voice feedback toggle
+            VoiceFeedbackToggle(
+                voiceManager = voiceManager,
+                onExpandSettings = { showVoiceSettings = !showVoiceSettings }
             )
 
             Spacer(modifier = Modifier.width(4.dp))
@@ -282,6 +310,15 @@ fun ActivityStreamingScreen(
             ZoneAlertSettingsPanel(
                 alertManager = alertManager,
                 onDismiss = { showAlertSettings = false }
+            )
+        }
+
+        // Voice feedback settings panel (expandable)
+        if (showVoiceSettings) {
+            Spacer(modifier = Modifier.height(8.dp))
+            VoiceFeedbackSettingsPanel(
+                voiceManager = voiceManager,
+                onDismiss = { showVoiceSettings = false }
             )
         }
 
@@ -441,6 +478,9 @@ fun ActivityStreamingScreen(
                         repository.startSession()
                         alertManager.reset()
                         autoPauseManager.reset()
+                        voiceManager.reset()
+                        voiceManager.announceStart()
+                        sessionStartTime = System.currentTimeMillis()
                         isRecording = true
                     }
                 }

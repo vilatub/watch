@@ -173,7 +173,7 @@ Data is transmitted as a dictionary every 3 seconds:
 - [x] Overall statistics screen (totals by activity type, weekly summary)
 - [x] Heart rate zone alerts (vibration when leaving target zone)
 - [x] Auto-pause (pause when stopped)
-- [ ] Voice feedback (audio notifications for pace/HR)
+- [x] Voice feedback (audio notifications for pace/HR)
 - [ ] Lap/interval tracking
 
 ## Strava Integration
