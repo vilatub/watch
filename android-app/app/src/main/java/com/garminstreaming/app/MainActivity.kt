@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
@@ -39,6 +40,7 @@ import androidx.navigation.navArgument
 import com.garminstreaming.app.data.SessionManager
 import com.garminstreaming.app.ui.SessionDetailScreen
 import com.garminstreaming.app.ui.SessionHistoryScreen
+import com.garminstreaming.app.ui.StatisticsScreen
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -123,6 +125,9 @@ fun AppNavigation() {
             ActivityStreamingScreen(
                 onNavigateToHistory = {
                     navController.navigate("history")
+                },
+                onNavigateToStatistics = {
+                    navController.navigate("statistics")
                 }
             )
         }
@@ -133,6 +138,13 @@ fun AppNavigation() {
                 },
                 onSessionClick = { sessionId ->
                     navController.navigate("session/$sessionId")
+                }
+            )
+        }
+        composable("statistics") {
+            StatisticsScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
                 }
             )
         }
@@ -153,7 +165,8 @@ fun AppNavigation() {
 
 @Composable
 fun ActivityStreamingScreen(
-    onNavigateToHistory: () -> Unit = {}
+    onNavigateToHistory: () -> Unit = {},
+    onNavigateToStatistics: () -> Unit = {}
 ) {
     val activityData by ActivityRepository.currentData.collectAsState()
     val connectionStatus by ActivityRepository.connectionStatus.collectAsState()
@@ -182,6 +195,17 @@ fun ActivityStreamingScreen(
             )
 
             Spacer(modifier = Modifier.width(8.dp))
+
+            // Statistics button
+            IconButton(
+                onClick = onNavigateToStatistics
+            ) {
+                Icon(
+                    Icons.Default.Analytics,
+                    contentDescription = "Statistics",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
 
             // History button
             IconButton(
