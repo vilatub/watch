@@ -7,6 +7,24 @@ import kotlinx.coroutines.flow.asStateFlow
 /**
  * Data class representing activity metrics from the Garmin watch
  */
+/**
+ * Activity types supported
+ */
+enum class ActivityType(val displayName: String, val icon: String) {
+    RUNNING("Running", "directions_run"),
+    CYCLING("Cycling", "directions_bike"),
+    WALKING("Walking", "directions_walk"),
+    HIKING("Hiking", "hiking"),
+    SWIMMING("Swimming", "pool"),
+    OTHER("Other", "fitness_center");
+
+    companion object {
+        fun fromString(value: String): ActivityType {
+            return entries.find { it.name.lowercase() == value.lowercase() } ?: OTHER
+        }
+    }
+}
+
 data class ActivityData(
     val timestamp: Long = 0,
     val heartRate: Int = 0,
@@ -16,7 +34,8 @@ data class ActivityData(
     val altitude: Double = 0.0,   // meters
     val distance: Double = 0.0,   // meters
     val cadence: Int = 0,         // steps per minute (running) or rpm (cycling)
-    val power: Int = 0            // watts (if power meter available)
+    val power: Int = 0,           // watts (if power meter available)
+    val activityType: ActivityType = ActivityType.RUNNING
 ) {
     val speedKmh: Double get() = speed * 3.6
     val distanceKm: Double get() = distance / 1000.0

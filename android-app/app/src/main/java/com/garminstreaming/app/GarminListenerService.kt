@@ -134,6 +134,8 @@ class GarminListenerService : Service() {
             val type = dataMap["type"] as? String
             if (type != "activity_data") return
 
+            val activityTypeStr = (dataMap["activity_type"] as? String) ?: "running"
+
             val activityData = ActivityData(
                 timestamp = (dataMap["timestamp"] as? Number)?.toLong() ?: System.currentTimeMillis(),
                 heartRate = (dataMap["hr"] as? Number)?.toInt() ?: 0,
@@ -143,14 +145,15 @@ class GarminListenerService : Service() {
                 altitude = (dataMap["altitude"] as? Number)?.toDouble() ?: 0.0,
                 distance = (dataMap["distance"] as? Number)?.toDouble() ?: 0.0,
                 cadence = (dataMap["cadence"] as? Number)?.toInt() ?: 0,
-                power = (dataMap["power"] as? Number)?.toInt() ?: 0
+                power = (dataMap["power"] as? Number)?.toInt() ?: 0,
+                activityType = ActivityType.fromString(activityTypeStr)
             )
 
             ActivityRepository.updateData(activityData)
             ActivityRepository.setConnectionStatus(ConnectionStatus.STREAMING)
 
             Log.d(TAG, "Activity data: HR=${activityData.heartRate}, " +
-                    "Cad=${activityData.cadence}, Pwr=${activityData.power}")
+                    "Type=${activityData.activityType}")
 
         } catch (e: Exception) {
             Log.e(TAG, "Failed to process message", e)
