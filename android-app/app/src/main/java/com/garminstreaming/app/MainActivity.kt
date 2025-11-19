@@ -59,6 +59,7 @@ import com.garminstreaming.app.ui.CurrentLapIndicator
 import com.garminstreaming.app.ui.LastLapSummary
 import com.garminstreaming.app.ui.LapHistoryPanel
 import com.garminstreaming.app.ui.IntervalScreen
+import com.garminstreaming.app.ui.AnalyticsScreen
 import com.garminstreaming.app.voice.VoiceFeedbackManager
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
@@ -150,6 +151,9 @@ fun AppNavigation() {
                 },
                 onNavigateToIntervals = {
                     navController.navigate("intervals")
+                },
+                onNavigateToAnalytics = {
+                    navController.navigate("analytics")
                 }
             )
         }
@@ -177,6 +181,13 @@ fun AppNavigation() {
                 }
             )
         }
+        composable("analytics") {
+            AnalyticsScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
         composable(
             route = "session/{sessionId}",
             arguments = listOf(navArgument("sessionId") { type = NavType.LongType })
@@ -196,7 +207,8 @@ fun AppNavigation() {
 fun ActivityStreamingScreen(
     onNavigateToHistory: () -> Unit = {},
     onNavigateToStatistics: () -> Unit = {},
-    onNavigateToIntervals: () -> Unit = {}
+    onNavigateToIntervals: () -> Unit = {},
+    onNavigateToAnalytics: () -> Unit = {}
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val activityData by ActivityRepository.currentData.collectAsState()
@@ -346,6 +358,17 @@ fun ActivityStreamingScreen(
                 Icon(
                     Icons.Default.Timer,
                     contentDescription = "Intervals",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            // Analytics button
+            IconButton(
+                onClick = onNavigateToAnalytics
+            ) {
+                Icon(
+                    Icons.Default.Analytics,
+                    contentDescription = "Analytics",
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
