@@ -29,6 +29,9 @@ import com.garminstreaming.app.data.SessionManager
 import com.garminstreaming.app.export.GpxExporter
 import com.garminstreaming.app.export.TcxExporter
 import com.garminstreaming.app.getHeartRateZoneColor
+import com.garminstreaming.app.strava.StravaClient
+import com.garminstreaming.app.strava.UploadResult
+import kotlinx.coroutines.launch
 import com.garminstreaming.app.HeartRateZone
 import com.garminstreaming.app.ZoneTimeData
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -49,12 +52,24 @@ fun SessionDetailScreen(
     val repository = remember { SessionManager.getInstance() }
     var session by remember { mutableStateOf<ActivitySession?>(null) }
     var showExportMenu by remember { mutableStateOf(false) }
+    var uploadStatus by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(sessionId) {
         session = repository.getSessionById(sessionId)
     }
 
+    // Show upload status
+    LaunchedEffect(uploadStatus) {
+        uploadStatus?.let {
+            snackbarHostState.showSnackbar(it)
+            uploadStatus = null
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Session Details") },
@@ -91,6 +106,33 @@ fun SessionDetailScreen(
                                     onClick = {
                                         showExportMenu = false
                                         exportSession(context, s, ExportFormat.TCX)
+                                    }
+                                )
+                                HorizontalDivider()
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            if (StravaClient.isConnected(context)) "Upload to Strava"
+                                            else "Connect to Strava"
+                                        )
+                                    },
+                                    onClick = {
+                                        showExportMenu = false
+                                        if (StravaClient.isConnected(context)) {
+                                            scope.launch {
+                                                uploadStatus = "Uploading to Strava..."
+                                                when (val result = StravaClient.uploadActivity(context, s)) {
+                                                    is UploadResult.Success -> {
+                                                        uploadStatus = "Upload successful!"
+                                                    }
+                                                    is UploadResult.Error -> {
+                                                        uploadStatus = result.message
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            StravaClient.startAuthorization(context)
+                                        }
                                     }
                                 )
                             }
