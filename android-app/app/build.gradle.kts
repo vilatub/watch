@@ -85,6 +85,9 @@ dependencies {
     // Gson for JSON serialization
     implementation("com.google.code.gson:gson:2.10.1")
 
+    // DataStore for settings persistence
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
+
     // Garmin Connect IQ Mobile SDK
     implementation(files("libs/connectiq-mobile-sdk-android-1.5.aar"))
 

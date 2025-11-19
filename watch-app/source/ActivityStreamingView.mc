@@ -6,6 +6,8 @@ using Toybox.Position;
 using Toybox.Timer;
 using Toybox.Communications;
 using Toybox.Lang;
+using Toybox.Attention;
+using Toybox.Application;
 
 class ActivityStreamingView extends WatchUi.View {
 
@@ -22,6 +24,14 @@ class ActivityStreamingView extends WatchUi.View {
     private var _lastLat = 0.0;
     private var _lastLon = 0.0;
     private var _connectionStatus = "Ready";
+
+    // Lap tracking
+    private var _lapCount = 0;
+    private var _lapDistance = 0.0;
+    private var _lastLapDistance = 0.0;
+
+    // Display mode
+    private var _showExtendedData = true;
 
     // Streaming interval in milliseconds (configurable)
     private var _streamInterval = 3000;
@@ -70,31 +80,73 @@ class ActivityStreamingView extends WatchUi.View {
         var height = dc.getHeight();
         var centerX = width / 2;
 
-        // Draw status
-        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(centerX, 20, Graphics.FONT_SMALL, _connectionStatus, Graphics.TEXT_JUSTIFY_CENTER);
+        // Draw battery indicator (top left)
+        var battery = System.getSystemStats().battery;
+        var batteryColor = Graphics.COLOR_GREEN;
+        if (battery < 20) {
+            batteryColor = Graphics.COLOR_RED;
+        } else if (battery < 50) {
+            batteryColor = Graphics.COLOR_YELLOW;
+        }
+        dc.setColor(batteryColor, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(10, 5, Graphics.FONT_XTINY, battery.format("%d") + "%", Graphics.TEXT_JUSTIFY_LEFT);
 
-        // Draw heart rate (large)
-        dc.setColor(Graphics.COLOR_RED, Graphics.COLOR_TRANSPARENT);
-        var hrText = _heartRate > 0 ? _heartRate.toString() : "--";
-        dc.drawText(centerX, height / 3, Graphics.FONT_NUMBER_HOT, hrText, Graphics.TEXT_JUSTIFY_CENTER);
-        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(centerX, height / 3 + 50, Graphics.FONT_TINY, "BPM", Graphics.TEXT_JUSTIFY_CENTER);
-
-        // Draw speed
-        var speedKmh = _speed * 3.6; // m/s to km/h
-        var speedText = speedKmh.format("%.1f") + " km/h";
-        dc.drawText(centerX, height * 2 / 3, Graphics.FONT_SMALL, speedText, Graphics.TEXT_JUSTIFY_CENTER);
-
-        // Draw distance
-        var distKm = _distance / 1000.0;
-        var distText = distKm.format("%.2f") + " km";
-        dc.drawText(centerX, height * 2 / 3 + 25, Graphics.FONT_SMALL, distText, Graphics.TEXT_JUSTIFY_CENTER);
-
-        // Draw streaming indicator
+        // Draw streaming indicator (top right)
         if (_isStreaming) {
             dc.setColor(Graphics.COLOR_GREEN, Graphics.COLOR_TRANSPARENT);
-            dc.fillCircle(width - 15, 15, 5);
+            dc.fillCircle(width - 15, 12, 5);
+        }
+
+        // Draw status (top center)
+        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(centerX, 5, Graphics.FONT_XTINY, _connectionStatus, Graphics.TEXT_JUSTIFY_CENTER);
+
+        // Draw heart rate (large, center)
+        dc.setColor(Graphics.COLOR_RED, Graphics.COLOR_TRANSPARENT);
+        var hrText = _heartRate > 0 ? _heartRate.toString() : "--";
+        dc.drawText(centerX, height / 4, Graphics.FONT_NUMBER_HOT, hrText, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(centerX, height / 4 + 45, Graphics.FONT_XTINY, "BPM", Graphics.TEXT_JUSTIFY_CENTER);
+
+        // Draw speed and distance row
+        var speedKmh = _speed * 3.6; // m/s to km/h
+        var distKm = _distance / 1000.0;
+
+        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
+        // Speed (left)
+        dc.drawText(width / 4, height / 2 + 10, Graphics.FONT_MEDIUM, speedKmh.format("%.1f"), Graphics.TEXT_JUSTIFY_CENTER);
+        dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(width / 4, height / 2 + 35, Graphics.FONT_XTINY, "km/h", Graphics.TEXT_JUSTIFY_CENTER);
+
+        // Distance (right)
+        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(width * 3 / 4, height / 2 + 10, Graphics.FONT_MEDIUM, distKm.format("%.2f"), Graphics.TEXT_JUSTIFY_CENTER);
+        dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(width * 3 / 4, height / 2 + 35, Graphics.FONT_XTINY, "km", Graphics.TEXT_JUSTIFY_CENTER);
+
+        // Extended data row (cadence, power/lap)
+        if (_showExtendedData) {
+            var bottomY = height - 45;
+
+            // Cadence (left)
+            dc.setColor(Graphics.COLOR_BLUE, Graphics.COLOR_TRANSPARENT);
+            var cadText = _cadence > 0 ? _cadence.toString() : "--";
+            dc.drawText(width / 4, bottomY, Graphics.FONT_SMALL, cadText, Graphics.TEXT_JUSTIFY_CENTER);
+            dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
+            dc.drawText(width / 4, bottomY + 20, Graphics.FONT_XTINY, "CAD", Graphics.TEXT_JUSTIFY_CENTER);
+
+            // Power or Lap (right)
+            if (_power > 0) {
+                dc.setColor(Graphics.COLOR_ORANGE, Graphics.COLOR_TRANSPARENT);
+                dc.drawText(width * 3 / 4, bottomY, Graphics.FONT_SMALL, _power.toString(), Graphics.TEXT_JUSTIFY_CENTER);
+                dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
+                dc.drawText(width * 3 / 4, bottomY + 20, Graphics.FONT_XTINY, "W", Graphics.TEXT_JUSTIFY_CENTER);
+            } else if (_lapCount > 0) {
+                dc.setColor(Graphics.COLOR_YELLOW, Graphics.COLOR_TRANSPARENT);
+                dc.drawText(width * 3 / 4, bottomY, Graphics.FONT_SMALL, _lapCount.toString(), Graphics.TEXT_JUSTIFY_CENTER);
+                dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
+                dc.drawText(width * 3 / 4, bottomY + 20, Graphics.FONT_XTINY, "LAP", Graphics.TEXT_JUSTIFY_CENTER);
+            }
         }
     }
 
@@ -165,10 +217,48 @@ class ActivityStreamingView extends WatchUi.View {
             _distance = 0.0;
             _lastLat = 0.0;
             _lastLon = 0.0;
+            _lapCount = 0;
+            _lapDistance = 0.0;
+            _lastLapDistance = 0.0;
             _connectionStatus = "Streaming";
             _timer.start(method(:streamData), _streamInterval, true);
             WatchUi.requestUpdate();
         }
+    }
+
+    // Mark a new lap
+    function markLap() {
+        _lapCount++;
+        _lapDistance = _distance - _lastLapDistance;
+        _lastLapDistance = _distance;
+
+        // Send lap event to phone
+        var lapData = {
+            "type" => "lap_event",
+            "timestamp" => System.getTimer(),
+            "lap_number" => _lapCount,
+            "lap_distance" => _lapDistance,
+            "total_distance" => _distance,
+            "hr" => _heartRate,
+            "speed" => _speed
+        };
+
+        if (Communications has :transmit) {
+            Communications.transmit(lapData, null, new CommListener());
+        }
+
+        // Vibrate to confirm
+        if (Attention has :vibrate) {
+            var vibePattern = [new Attention.VibeProfile(50, 200)];
+            Attention.vibrate(vibePattern);
+        }
+
+        WatchUi.requestUpdate();
+        System.println("Lap " + _lapCount + " marked: " + _lapDistance.format("%.2f") + "m");
+    }
+
+    function getLapCount() {
+        return _lapCount;
     }
 
     function setStreamInterval(interval) {
@@ -214,7 +304,9 @@ class ActivityStreamingView extends WatchUi.View {
             "distance" => _distance,
             "cadence" => _cadence,
             "power" => _power,
-            "activity_type" => _activityType
+            "activity_type" => _activityType,
+            "lap_count" => _lapCount,
+            "battery" => System.getSystemStats().battery
         };
 
         // Send via Communications API to companion app

@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -41,6 +42,7 @@ import com.garminstreaming.app.alerts.ZoneAlertManager
 import com.garminstreaming.app.autopause.AutoPauseManager
 import com.garminstreaming.app.data.SessionManager
 import com.garminstreaming.app.laps.LapManager
+import com.garminstreaming.app.settings.SettingsRepository
 import com.garminstreaming.app.ui.SessionDetailScreen
 import com.garminstreaming.app.ui.SessionHistoryScreen
 import com.garminstreaming.app.ui.StatisticsScreen
@@ -56,6 +58,7 @@ import com.garminstreaming.app.ui.LapButton
 import com.garminstreaming.app.ui.CurrentLapIndicator
 import com.garminstreaming.app.ui.LastLapSummary
 import com.garminstreaming.app.ui.LapHistoryPanel
+import com.garminstreaming.app.ui.IntervalScreen
 import com.garminstreaming.app.voice.VoiceFeedbackManager
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
@@ -144,6 +147,9 @@ fun AppNavigation() {
                 },
                 onNavigateToStatistics = {
                     navController.navigate("statistics")
+                },
+                onNavigateToIntervals = {
+                    navController.navigate("intervals")
                 }
             )
         }
@@ -159,6 +165,13 @@ fun AppNavigation() {
         }
         composable("statistics") {
             StatisticsScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+        composable("intervals") {
+            IntervalScreen(
                 onNavigateBack = {
                     navController.popBackStack()
                 }
@@ -182,7 +195,8 @@ fun AppNavigation() {
 @Composable
 fun ActivityStreamingScreen(
     onNavigateToHistory: () -> Unit = {},
-    onNavigateToStatistics: () -> Unit = {}
+    onNavigateToStatistics: () -> Unit = {},
+    onNavigateToIntervals: () -> Unit = {}
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val activityData by ActivityRepository.currentData.collectAsState()
@@ -192,6 +206,7 @@ fun ActivityStreamingScreen(
 
     val scope = rememberCoroutineScope()
     val repository = remember { SessionManager.getInstance() }
+    val settingsRepository = remember { SettingsRepository.getInstance(context) }
     val alertManager = remember { ZoneAlertManager.getInstance(context) }
     val autoPauseManager = remember { AutoPauseManager.getInstance() }
     val voiceManager = remember { VoiceFeedbackManager.getInstance(context) }
@@ -209,6 +224,34 @@ fun ActivityStreamingScreen(
     val autoPauseState by autoPauseManager.state.collectAsState()
     val voiceSettings by voiceManager.settings.collectAsState()
     val lapState by lapManager.state.collectAsState()
+
+    // Load saved settings on startup
+    LaunchedEffect(Unit) {
+        settingsRepository.zoneAlertSettings.collect { saved ->
+            alertManager.updateSettings(saved)
+        }
+    }
+    LaunchedEffect(Unit) {
+        settingsRepository.autoPauseSettings.collect { saved ->
+            autoPauseManager.updateSettings(saved)
+        }
+    }
+    LaunchedEffect(Unit) {
+        settingsRepository.voiceFeedbackSettings.collect { saved ->
+            voiceManager.updateSettings(saved)
+        }
+    }
+
+    // Save settings when they change
+    LaunchedEffect(alertSettings) {
+        settingsRepository.saveZoneAlertSettings(alertSettings)
+    }
+    LaunchedEffect(autoPauseSettings) {
+        settingsRepository.saveAutoPauseSettings(autoPauseSettings)
+    }
+    LaunchedEffect(voiceSettings) {
+        settingsRepository.saveVoiceFeedbackSettings(voiceSettings)
+    }
 
     // Add samples for lap tracking
     LaunchedEffect(activityData.heartRate, activityData.speed) {
@@ -295,6 +338,17 @@ fun ActivityStreamingScreen(
             )
 
             Spacer(modifier = Modifier.width(4.dp))
+
+            // Intervals button
+            IconButton(
+                onClick = onNavigateToIntervals
+            ) {
+                Icon(
+                    Icons.Default.Timer,
+                    contentDescription = "Intervals",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
 
             // Statistics button
             IconButton(

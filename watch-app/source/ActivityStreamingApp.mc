@@ -4,6 +4,8 @@ using Toybox.System;
 
 class ActivityStreamingApp extends Application.AppBase {
 
+    private var _view;
+
     function initialize() {
         AppBase.initialize();
     }
@@ -17,8 +19,12 @@ class ActivityStreamingApp extends Application.AppBase {
     }
 
     function getInitialView() {
-        var view = new ActivityStreamingView();
-        var delegate = new ActivityStreamingDelegate(view);
-        return [view, delegate];
+        _view = new ActivityStreamingView();
+        var delegate = new ActivityStreamingDelegate(_view);
+        return [_view, delegate];
+    }
+
+    function getView() {
+        return _view;
     }
 }
