@@ -15,14 +15,22 @@ class ActivityStreamingView extends WatchUi.View {
     private var _speed = 0.0;
     private var _altitude = 0.0;
     private var _distance = 0.0;
+    private var _cadence = 0;        // steps per minute (running) or rpm (cycling)
+    private var _power = 0;          // watts (if power meter available)
     private var _isStreaming = false;
     private var _timer;
     private var _lastLat = 0.0;
     private var _lastLon = 0.0;
     private var _connectionStatus = "Ready";
 
-    // Streaming interval in milliseconds
-    private const STREAM_INTERVAL = 3000;
+    // Streaming interval in milliseconds (configurable)
+    private var _streamInterval = 3000;
+
+    // Default intervals
+    public static const INTERVAL_1S = 1000;
+    public static const INTERVAL_3S = 3000;
+    public static const INTERVAL_5S = 5000;
+    public static const INTERVAL_10S = 10000;
 
     function initialize() {
         View.initialize();
@@ -88,8 +96,19 @@ class ActivityStreamingView extends WatchUi.View {
     function onSensorEvent(sensorInfo) {
         if (sensorInfo has :heartRate && sensorInfo.heartRate != null) {
             _heartRate = sensorInfo.heartRate;
-            WatchUi.requestUpdate();
         }
+
+        // Cadence (running cadence or cycling cadence)
+        if (sensorInfo has :cadence && sensorInfo.cadence != null) {
+            _cadence = sensorInfo.cadence;
+        }
+
+        // Power (from power meter if available)
+        if (sensorInfo has :power && sensorInfo.power != null) {
+            _power = sensorInfo.power;
+        }
+
+        WatchUi.requestUpdate();
     }
 
     function onPositionEvent(info) {
@@ -136,9 +155,22 @@ class ActivityStreamingView extends WatchUi.View {
             _lastLat = 0.0;
             _lastLon = 0.0;
             _connectionStatus = "Streaming";
-            _timer.start(method(:streamData), STREAM_INTERVAL, true);
+            _timer.start(method(:streamData), _streamInterval, true);
             WatchUi.requestUpdate();
         }
+    }
+
+    function setStreamInterval(interval) {
+        _streamInterval = interval;
+        // Restart timer if streaming
+        if (_isStreaming) {
+            _timer.stop();
+            _timer.start(method(:streamData), _streamInterval, true);
+        }
+    }
+
+    function getStreamInterval() {
+        return _streamInterval;
     }
 
     function stopStreaming() {
@@ -168,7 +200,9 @@ class ActivityStreamingView extends WatchUi.View {
             "lon" => _longitude,
             "speed" => _speed,
             "altitude" => _altitude,
-            "distance" => _distance
+            "distance" => _distance,
+            "cadence" => _cadence,
+            "power" => _power
         };
 
         // Send via Communications API to companion app
@@ -176,7 +210,15 @@ class ActivityStreamingView extends WatchUi.View {
             Communications.transmit(data, null, new CommListener());
         }
 
-        System.println("Streaming: HR=" + _heartRate + " Lat=" + _latitude + " Lon=" + _longitude);
+        System.println("Streaming: HR=" + _heartRate + " Cad=" + _cadence + " Pwr=" + _power);
+    }
+
+    function getCadence() {
+        return _cadence;
+    }
+
+    function getPower() {
+        return _power;
     }
 
     function getHeartRate() {

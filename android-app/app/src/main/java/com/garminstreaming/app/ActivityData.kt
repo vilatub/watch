@@ -14,7 +14,9 @@ data class ActivityData(
     val longitude: Double = 0.0,
     val speed: Double = 0.0,      // m/s
     val altitude: Double = 0.0,   // meters
-    val distance: Double = 0.0    // meters
+    val distance: Double = 0.0,   // meters
+    val cadence: Int = 0,         // steps per minute (running) or rpm (cycling)
+    val power: Int = 0            // watts (if power meter available)
 ) {
     val speedKmh: Double get() = speed * 3.6
     val distanceKm: Double get() = distance / 1000.0

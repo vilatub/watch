@@ -15,6 +15,9 @@ This project enables live streaming of fitness metrics (heart rate, GPS, speed, 
 - **Speed** in km/h
 - **Distance** calculation
 - **Pace** for running
+- **Cadence** (steps per minute)
+- **Power** (watts, if power meter available)
+- **Configurable streaming interval** (1s, 3s, 5s, 10s)
 
 ## Architecture
 
@@ -152,8 +155,8 @@ Data is transmitted as a dictionary every 3 seconds:
 - [x] Session history storage (Room database)
 - [x] Session recording with start/stop
 - [x] Session list and detail views
-- [ ] More metrics (cadence, power)
-- [ ] Custom streaming interval
+- [x] More metrics (cadence, power)
+- [x] Custom streaming interval (watch app)
 
 ### Phase 3
 - [ ] Multiple activity types

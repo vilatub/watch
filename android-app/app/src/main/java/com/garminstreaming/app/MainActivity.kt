@@ -251,6 +251,34 @@ fun ActivityStreamingScreen(
             )
         }
 
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Tertiary metrics (Cadence and Power)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            // Cadence
+            MetricCard(
+                value = if (activityData.cadence > 0) activityData.cadence.toString() else "--",
+                unit = "spm",
+                label = "Cadence",
+                color = Color(0xFFFF9800), // Orange
+                modifier = Modifier.weight(1f)
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // Power
+            MetricCard(
+                value = if (activityData.power > 0) activityData.power.toString() else "--",
+                unit = "W",
+                label = "Power",
+                color = Color(0xFF9C27B0), // Purple
+                modifier = Modifier.weight(1f)
+            )
+        }
+
         Spacer(modifier = Modifier.height(12.dp))
 
         // Heart Rate Graph
