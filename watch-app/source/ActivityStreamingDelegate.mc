@@ -31,10 +31,26 @@ class ActivityStreamingDelegate extends WatchUi.BehaviorDelegate {
         return false; // Allow default back behavior (exit app)
     }
 
-    // Handle menu button
+    // Handle menu button - show settings
     function onMenu() {
-        // Could add settings menu here in future
+        var menu = new ActivityStreamingMenu();
+        WatchUi.pushView(menu, new ActivityStreamingMenuDelegate(_view), WatchUi.SLIDE_UP);
         return true;
+    }
+
+    // Handle key press - lap button
+    function onKey(keyEvent) {
+        var key = keyEvent.getKey();
+
+        // Back button for lap (common Garmin pattern)
+        if (key == WatchUi.KEY_LAP || key == WatchUi.KEY_ENTER) {
+            if (_view.isStreaming()) {
+                _view.markLap();
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // Handle swipe up - start streaming
