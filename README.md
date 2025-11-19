@@ -9,6 +9,8 @@ This project enables live streaming of fitness metrics (heart rate, GPS, speed, 
 ### Features (MVP)
 
 - **Heart Rate** streaming every 3 seconds
+- **Real-time HR Graph** with min/avg/max stats
+- **Heart Rate Zones** color-coded (Recovery → VO2 Max)
 - **GPS Location** with live map tracking
 - **Speed** in km/h
 - **Distance** calculation
@@ -145,7 +147,8 @@ Data is transmitted as a dictionary every 3 seconds:
 ## Roadmap
 
 ### Phase 2
-- [ ] Real-time heart rate graph
+- [x] Real-time heart rate graph
+- [x] Heart rate zones coloring
 - [ ] Session history storage
 - [ ] More metrics (cadence, power)
 - [ ] Custom streaming interval

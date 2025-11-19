@@ -7,6 +7,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -16,7 +17,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -96,6 +100,7 @@ fun ActivityStreamingScreen() {
     val activityData by ActivityRepository.currentData.collectAsState()
     val connectionStatus by ActivityRepository.connectionStatus.collectAsState()
     val trackPoints by ActivityRepository.trackPoints.collectAsState()
+    val heartRateHistory by ActivityRepository.heartRateHistory.collectAsState()
 
     Column(
         modifier = Modifier
@@ -105,7 +110,7 @@ fun ActivityStreamingScreen() {
         // Connection status
         ConnectionStatusBar(connectionStatus)
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Main metrics
         Row(
@@ -117,7 +122,7 @@ fun ActivityStreamingScreen() {
                 value = if (activityData.heartRate > 0) activityData.heartRate.toString() else "--",
                 unit = "BPM",
                 label = "Heart Rate",
-                color = Color.Red,
+                color = getHeartRateZoneColor(activityData.heartRate),
                 modifier = Modifier.weight(1f)
             )
 
@@ -161,7 +166,17 @@ fun ActivityStreamingScreen() {
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Heart Rate Graph
+        HeartRateGraph(
+            heartRateHistory = heartRateHistory,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(120.dp)
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Map
         Card(
@@ -186,6 +201,154 @@ fun ActivityStreamingScreen() {
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center
         )
+    }
+}
+
+/**
+ * Get color based on heart rate zone
+ * Zones based on typical max HR of 190 (adjustable)
+ */
+fun getHeartRateZoneColor(hr: Int, maxHr: Int = 190): Color {
+    if (hr <= 0) return Color.Gray
+    val percentage = (hr.toFloat() / maxHr) * 100
+    return when {
+        percentage < 50 -> Color.Gray           // Rest
+        percentage < 60 -> Color(0xFF64B5F6)    // Zone 1 - Light blue (Recovery)
+        percentage < 70 -> Color(0xFF4CAF50)    // Zone 2 - Green (Aerobic)
+        percentage < 80 -> Color(0xFFFFEB3B)    // Zone 3 - Yellow (Tempo)
+        percentage < 90 -> Color(0xFFFF9800)    // Zone 4 - Orange (Threshold)
+        else -> Color(0xFFF44336)               // Zone 5 - Red (VO2 Max)
+    }
+}
+
+@Composable
+fun HeartRateGraph(
+    heartRateHistory: List<Pair<Long, Int>>,
+    modifier: Modifier = Modifier,
+    maxHr: Int = 190
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        if (heartRateHistory.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Waiting for HR data...",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                )
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp)
+            ) {
+                // Stats row
+                val hrValues = heartRateHistory.map { it.second }
+                val avgHr = hrValues.average().toInt()
+                val minHr = hrValues.minOrNull() ?: 0
+                val maxHrValue = hrValues.maxOrNull() ?: 0
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Min: $minHr",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFF64B5F6)
+                    )
+                    Text(
+                        text = "Avg: $avgHr",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFF4CAF50)
+                    )
+                    Text(
+                        text = "Max: $maxHrValue",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFFF44336)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Graph
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                ) {
+                    if (heartRateHistory.size < 2) return@Canvas
+
+                    val width = size.width
+                    val height = size.height
+                    val padding = 4.dp.toPx()
+
+                    // Take last 60 points (3 minutes of data at 3s intervals)
+                    val displayData = heartRateHistory.takeLast(60)
+
+                    // Find min/max for scaling
+                    val hrMin = (displayData.minOfOrNull { it.second } ?: 60) - 10
+                    val hrMax = (displayData.maxOfOrNull { it.second } ?: 180) + 10
+                    val hrRange = (hrMax - hrMin).coerceAtLeast(1)
+
+                    val pointSpacing = (width - 2 * padding) / (displayData.size - 1).coerceAtLeast(1)
+
+                    // Draw grid lines
+                    val gridColor = Color.Gray.copy(alpha = 0.2f)
+                    for (i in 0..4) {
+                        val y = padding + (height - 2 * padding) * i / 4
+                        drawLine(
+                            color = gridColor,
+                            start = Offset(padding, y),
+                            end = Offset(width - padding, y),
+                            strokeWidth = 1f
+                        )
+                    }
+
+                    // Draw HR line with zone colors
+                    val path = Path()
+                    displayData.forEachIndexed { index, (_, hr) ->
+                        val x = padding + index * pointSpacing
+                        val y = height - padding - ((hr - hrMin).toFloat() / hrRange) * (height - 2 * padding)
+
+                        if (index == 0) {
+                            path.moveTo(x, y)
+                        } else {
+                            path.lineTo(x, y)
+                        }
+                    }
+
+                    // Draw the path
+                    drawPath(
+                        path = path,
+                        color = Color(0xFFF44336),
+                        style = Stroke(width = 2.dp.toPx())
+                    )
+
+                    // Draw points with zone colors
+                    displayData.forEachIndexed { index, (_, hr) ->
+                        val x = padding + index * pointSpacing
+                        val y = height - padding - ((hr - hrMin).toFloat() / hrRange) * (height - 2 * padding)
+                        val zoneColor = getHeartRateZoneColor(hr, maxHr)
+
+                        drawCircle(
+                            color = zoneColor,
+                            radius = 3.dp.toPx(),
+                            center = Offset(x, y)
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
